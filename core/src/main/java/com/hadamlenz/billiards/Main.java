@@ -9,10 +9,11 @@ import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.physics.box2d.Box2D;
-import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
 import com.badlogic.gdx.physics.box2d.Contact;
 import com.badlogic.gdx.physics.box2d.ContactImpulse;
 import com.badlogic.gdx.physics.box2d.ContactListener;
@@ -39,11 +40,14 @@ public class Main extends ApplicationAdapter implements ContactListener {
     private final List<Boundary> boundaries = new ArrayList<>();
     private final List<Pocket> pockets = new ArrayList<>();
     private final List<Ball> balls = new ArrayList<>();
+    private final List<Ball> sunkBalls = new ArrayList<>();
+    private boolean resetRequested;
     private Cue cue;
+
 
     private World world;
     private OrthographicCamera camera;
-    private Box2DDebugRenderer debugRenderer;
+    private ShapeRenderer shapes;
 
     /** runs once when the window opens. */
     @Override
@@ -54,7 +58,7 @@ public class Main extends ApplicationAdapter implements ContactListener {
         camera.setToOrtho(false,
                 Units.toMeters(Units.TABLE_WIDTH_PX),
                 Units.toMeters(Units.TABLE_HEIGHT_PX));
-        debugRenderer = new Box2DDebugRenderer();
+        shapes = new ShapeRenderer();
         resetTable();
     }
 
@@ -68,6 +72,9 @@ public class Main extends ApplicationAdapter implements ContactListener {
             world.dispose();
         }
         world = new World(new Vector2(0, 0), true);
+        world.setContactListener(this);
+        sunkBalls.clear();
+        resetRequested = false;
         float w = Units.TABLE_WIDTH_PX;
         float h = Units.TABLE_HEIGHT_PX;
         boundaries.clear();
@@ -75,7 +82,6 @@ public class Main extends ApplicationAdapter implements ContactListener {
         boundaries.add(new Boundary(world, 0, 0, RAIL_WIDTH, h * 2, 0));
         boundaries.add(new Boundary(world, w - 2, 0, RAIL_WIDTH, h * 2, 0));
         boundaries.add(new Boundary(world, w - 2, h - 2, w * 2, RAIL_WIDTH, 0));
-
 
         pockets.clear();
         pockets.add(new Pocket(world, 15, 0));
@@ -114,8 +120,34 @@ public class Main extends ApplicationAdapter implements ContactListener {
     public void render() {
         ScreenUtils.clear(0f, 0.4f, 0f, 1f);
         world.step(1 / 60f, 10, 8);
+        resolveSunkBalls();
         camera.update();
-        debugRenderer.render(world, camera.combined);
+        shapes.setProjectionMatrix(camera.combined);
+        shapes.begin(ShapeType.Filled);
+
+        for (Boundary boundary : boundaries) {
+            boundary.display(shapes);
+        }
+
+        for (Pocket pocket : pockets) {
+            pocket.display(shapes);
+        }
+
+        for (Ball ball : balls) {
+            ball.display(shapes);
+        }
+
+        cue.display(shapes);
+        shapes.end();
+
+        if (Gdx.input.isButtonPressed(Input.Buttons.LEFT)) {
+            Vector3 mouse = camera.unproject(
+                    new Vector3(Gdx.input.getX(), Gdx.input.getY(), 0));
+
+            shapes.begin(ShapeType.Line);
+            cue.update(shapes, new Vector2(mouse.x, mouse.y));
+            shapes.end();
+        }
     }
 
 
@@ -123,14 +155,44 @@ public class Main extends ApplicationAdapter implements ContactListener {
     @Override
     public void dispose() {
         world.dispose();
-        debugRenderer.dispose();
+        shapes.dispose();
     }
 
 
     /** Port of beginContact(): two bodies started touching. */
     @Override
     public void beginContact(Contact contact) {
+        Object first = contact.getFixtureA().getBody().getUserData();
+        Object second = contact.getFixtureB().getBody().getUserData();
+        if (first instanceof Pocket && second instanceof Ball) {
+            queueSunkBall((Ball) second);
+        } else if (second instanceof Pocket && first instanceof Ball) {
+            queueSunkBall((Ball) first);
+        }
     }
+
+    private void queueSunkBall(Ball ball) {
+        if (ball == cue) {
+            resetRequested = true;
+        } else if (!sunkBalls.contains(ball)) {
+            sunkBalls.add(ball);
+        }
+    }
+
+    private void resolveSunkBalls() {
+        if (resetRequested) {
+            resetTable();
+            return;
+        }
+
+        for (Ball ball : sunkBalls) {
+            ball.killBody();
+        }
+
+        balls.removeAll(sunkBalls);
+        sunkBalls.clear();
+    }
+
 
     /** Port of endContact(): empty in the original too. */
     @Override

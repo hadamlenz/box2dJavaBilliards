@@ -16,8 +16,15 @@ public class Cue extends Ball {
     }
 
     /** Draws the ball, plus the aiming line while the mouse is held. */
-    public void update(ShapeRenderer shapes) {
+    public void update(ShapeRenderer shapes, Vector2 target) {
+        Vector2 center = body.getWorldCenter();
+        float endX = center.x + (center.x - target.x);
+        float endY = center.y + (center.y - target.y);
+
+        shapes.setColor(Color.WHITE);
+        shapes.line(target.x, target.y, endX, endY);
     }
+
 
     /**
      * Shoots the ball away from the target point. The farther the target is

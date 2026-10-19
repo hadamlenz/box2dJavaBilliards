@@ -7,6 +7,7 @@ import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.CircleShape;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.World;
+import com.badlogic.gdx.graphics.Color;
 
 /**
  * A fixed circle at a pocket location. The sinking logic lives in
@@ -24,7 +25,15 @@ public class Pocket {
     }
 
     public void display(ShapeRenderer shapes) {
+        Vector2 position = body.getPosition();
+        shapes.setColor(Color.BLACK);
+        shapes.circle(
+                position.x,
+                position.y - Units.toMeters(RADIUS_PX),
+                Units.toMeters(RADIUS_PX),
+                32);
     }
+
 
     /** Creates the pocket's static physics body and circle shape. */
     protected void makeBody(World world, Vector2 center) {

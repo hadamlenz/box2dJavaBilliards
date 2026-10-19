@@ -25,7 +25,15 @@ public class Ball {
 
     /** Draws the ball, or parks it off the table once sunk. */
     public void display(ShapeRenderer shapes) {
+        if (!visible) {
+            return;
+        }
+
+        Vector2 center = body.getWorldCenter();
+        shapes.setColor(fill);
+        shapes.circle(center.x, center.y, Units.toMeters(RADIUS_PX), 32);
     }
+
 
     /** Removes the ball's body from the world. */
     public void killBody() {
