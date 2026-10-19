@@ -34,16 +34,37 @@ public class Main extends ApplicationAdapter implements ContactListener {
     //size and default scale.
     private static final float RAIL_WIDTH = 20;
     private static final float FOOTLINE = 150;
-    private static final float BALL_R = 17;
-    private static final float X_OFFSET = 3;
-    private static final float Y_OFFSET = 5;
+    private static final float BALL_DIAMETER = Ball.RADIUS_PX * 2;
+    private static final float RACK_ROW_SPACING = BALL_DIAMETER * 0.8660254f;
+
+    //ball colors
+    private static final Color[] BALL_COLORS = {
+            Color.valueOf("FDD835FF"),
+            Color.valueOf("1565C0FF"),
+            Color.valueOf("C62828FF"),
+            Color.valueOf("6A1B9AFF"),
+            Color.valueOf("EF6C00FF"),
+            Color.valueOf("2E7D32FF"),
+            Color.valueOf("7F0000FF"),
+            Color.BLACK
+    };
+
+    //gotta have a proper rack
+    //it's inverted
+    private static final int[] RACK_ORDER = {
+            1,
+            9, 2,
+            13, 8, 10,
+            14, 4, 11, 7,
+            3, 15, 5, 12, 6
+    };
+
     private final List<Boundary> boundaries = new ArrayList<>();
     private final List<Pocket> pockets = new ArrayList<>();
     private final List<Ball> balls = new ArrayList<>();
     private final List<Ball> sunkBalls = new ArrayList<>();
     private boolean resetRequested;
     private Cue cue;
-
 
     private World world;
     private OrthographicCamera camera;
@@ -62,7 +83,6 @@ public class Main extends ApplicationAdapter implements ContactListener {
         resetTable();
     }
 
-
     /**
      * Builds the world, rails, pockets, rack, and cue ball. 
      * reset the table (R key, or a scratch), 
@@ -71,12 +91,14 @@ public class Main extends ApplicationAdapter implements ContactListener {
         if (world != null) {
             world.dispose();
         }
+        //apple pie
         world = new World(new Vector2(0, 0), true);
         world.setContactListener(this);
         sunkBalls.clear();
         resetRequested = false;
         float w = Units.TABLE_WIDTH_PX;
         float h = Units.TABLE_HEIGHT_PX;
+        //the bounds arond the outside of the table
         boundaries.clear();
         boundaries.add(new Boundary(world, 0, 0, w * 2, RAIL_WIDTH, 0));
         boundaries.add(new Boundary(world, 0, 0, RAIL_WIDTH, h * 2, 0));
@@ -92,9 +114,18 @@ public class Main extends ApplicationAdapter implements ContactListener {
         pockets.add(new Pocket(world, w - 15, h - 30));
 
         balls.clear();
-        balls.add(new Ball(world, w / 2, FOOTLINE, Color.BLACK));
-        balls.add(new Ball(world, w / 2 - BALL_R + X_OFFSET, FOOTLINE - BALL_R - Y_OFFSET, Color.BLACK));
-        balls.add(new Ball(world, w / 2 + BALL_R - X_OFFSET, FOOTLINE - BALL_R - Y_OFFSET, Color.BLACK));
+        int rackIndex = 0;
+        //build the rack from the RACK_ORDER and ball color
+        for (int row = 0; row < 5; row++) {
+            float y = FOOTLINE - row * RACK_ROW_SPACING;
+            for (int column = 0; column <= row; column++) {
+                int number = RACK_ORDER[rackIndex++];
+                float x = w / 2 + (column - row / 2f) * BALL_DIAMETER;
+                Color color = BALL_COLORS[(number - 1) % BALL_COLORS.length];
+                balls.add(new Ball(world, x, y, color, number > 8));
+            }
+        }
+
 
         cue = new Cue(world, w / 2, 450);
 

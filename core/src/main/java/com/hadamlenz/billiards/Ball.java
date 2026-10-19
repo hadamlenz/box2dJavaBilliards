@@ -15,23 +15,46 @@ public class Ball {
     protected static final float RADIUS_PX = 10;
 
     protected Body body;
+    //solid balls and the cue
     protected final Color fill;
+    //striped balls
+    protected final boolean striped;
     protected boolean visible = true;
 
     public Ball(World world, float x, float y, Color fill) {
+        this(world, x, y, fill, false);
+    }
+
+    public Ball(World world, float x, float y, Color fill, boolean striped) {
         this.fill = fill;
+        this.striped = striped;
         makeBody(world, Units.toWorld(x, y));
     }
+
 
     /** Draws the ball, or parks it off the table once sunk. */
     public void display(ShapeRenderer shapes) {
         if (!visible) {
             return;
         }
-
         Vector2 center = body.getWorldCenter();
-        shapes.setColor(fill);
-        shapes.circle(center.x, center.y, Units.toMeters(RADIUS_PX), 32);
+        float radius = Units.toMeters(RADIUS_PX);
+
+        shapes.setColor(striped ? Color.WHITE : fill);
+        shapes.circle(center.x, center.y, radius, 32);
+
+        if (striped) {
+            float halfStripeHeight = radius * 0.4f;
+            float halfStripeWidth = (float) Math.sqrt(
+                    radius * radius - halfStripeHeight * halfStripeHeight);
+
+            shapes.setColor(fill);
+            shapes.rect(
+                    center.x - halfStripeWidth,
+                    center.y - halfStripeHeight,
+                    halfStripeWidth * 2,
+                    halfStripeHeight * 2);
+        }
     }
 
 
